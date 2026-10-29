@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ลงชื่อเวรทำความสะอาด</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Prompt', sans-serif; background-color: #FDFBF7; }
+        @media print {
+            .no-print { display: none !important; }
+            body { background: white !important; }
+            .print-container { display: block !important; }
+        }
+    </style>
+</head>
+<body class="text-slate-800 min-h-screen p-4 md:p-8">
+
+    <div class="max-w-4xl mx-auto">
+        <!-- หัวข้อสไตล์ญี่ปุ่นมินิมอล -->
+        <header class="text-center mb-8 no-print">
+            <div class="inline-block bg-amber-100 text-amber-800 text-xs px-3 py-1 rounded-full mb-2 font-medium">🌸 清掃当番 - Cleaning Duty</div>
+            <h1 class="text-3xl font-bold text-slate-800 mb-1">เลือกวันปฏิบัติเวรทำความสะอาด</h1>
+            <p class="text-slate-500 text-sm">จำกัดสูงสุดวันละ 6 คน (ข้อมูลอัปเดตแบบเรียลไทม์)</p>
+        </header>
+
+        <!-- ส่วนกรอกเลขที่ -->
+        <div id="input-section" class="bg-white rounded-3xl p-6 shadow-sm border border-amber-100 mb-8 no-print max-w-md mx-auto text-center">
+            <label class="block text-sm font-medium text-slate-700 mb-2">กรอกเลขที่ของคุณ (ก่อนเลือกวัน):</label>
+            <div class="flex gap-2">
+                <input type="number" id="studentNo" min="1" max="28" placeholder="เช่น 1, 2, 28" class="flex-1 px-4 py-3 border border-slate-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-amber-400 text-center text-lg font-bold">
+            </div>
+            <p class="text-xs text-slate-400 mt-2">💡 ใส่เลขที่แล้วจิ้มเลือกวันด้านล่างได้เลย ระบบจะบันทึกทันที</p>
+        </div>
+
+        <!-- 5 วัน 5 สีสไตล์ญี่ปุ่น -->
+        <div class="grid grid-cols-1 md:grid-cols-5 gap-4 mb-8" id="days-grid">
+            <!-- สร้างด้วย JavaScript -->
+        </div>
+
+        <!-- ปุ่มปริ้นท์ -->
+        <div class="text-center no-print">
+            <button onclick="window.print()" class="bg-slate-800 text-white px-8 py-3 rounded-2xl font-medium shadow-md hover:bg-slate-700 transition inline-flex items-center gap-2">
+                🖨️ โหลดตารางเวร / ปริ้นท์ติดบอร์ด
+            </button>
+        </div>
+
+        <!-- สำหรับตอนปริ้นท์ -->
+        <div class="hidden print-container mt-8">
+            <h2 class="text-2xl font-bold text-center mb-4">ตารางเวรทำความสะอาดประจำสัปดาห์</h2>
+            <div id="print-grid" class="grid grid-cols-5 gap-2"></div>
+        </div>
+    </div>
+
+    <!-- Firebase SDK (Realtime) -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { getDatabase, ref, onValue, runTransaction } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+
+        // ⚠️ นำค่า Config ของคุณมาใส่ตรงนี้
+        const firebaseConfig = {
+            apiKey: "// Import the functions you need from the SDKs you need
+import { initializeApp } from "firebase/app";
+import { getAnalytics } from "firebase/analytics";
+// TODO: Add SDKs for Firebase products that you want to use
+// https://firebase.google.com/docs/web/setup#available-libraries
+
+// Your web app's Firebase configuration
+// For Firebase JS SDK v7.20.0 and later, measurementId is optional
+const firebaseConfig = {
+  apiKey: "AIzaSyANfx7sutRcOJF2RBfbCx4jksZThIv8eBM",
+  authDomain: "cleaning-duty-d9da7.firebaseapp.com",
+  projectId: "cleaning-duty-d9da7",
+  storageBucket: "cleaning-duty-d9da7.firebasestorage.app",
+  messagingSenderId: "871947181991",
+  appId: "1:871947181991:web:9c28640cb1ce65810ea082",
+  measurementId: "G-9ZMRC196J6"
+};
+
+// Initialize Firebase
+const app = initializeApp(firebaseConfig);
+const analytics = getAnalytics(app);",
+            authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
+            databaseURL: "https://YOUR_PROJECT_ID-default-rtdb.firebaseio.com",
+            projectId: "YOUR_PROJECT_ID",
+            storageBucket: "YOUR_PROJECT_ID.appspot.com",
+            messagingSenderId: "YOUR_SENDER_ID",
+            appId: "YOUR_APP_ID"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getDatabase(app);
+
+        const days = [
+            { id: 'mon', name: 'วันจันทร์', color: 'bg-amber-50 border-amber-200 text-amber-900', badge: 'bg-amber-200 text-amber-800' },
+            { id: 'tue', name: 'วันอังคาร', color: 'bg-pink-50 border-pink-200 text-pink-900', badge: 'bg-pink-200 text-pink-800' },
+            { id: 'wed', name: 'วันพุธ', color: 'bg-emerald-50 border-emerald-200 text-emerald-900', badge: 'bg-emerald-200 text-emerald-800' },
+            { id: 'thu', name: 'วันพฤหัสบดี', color: 'bg-orange-50 border-orange-200 text-orange-900', badge: 'bg-orange-200 text-orange-800' },
+            { id: 'fri', name: 'วันศุกร์', color: 'bg-sky-50 border-sky-200 text-sky-900', badge: 'bg-sky-200 text-sky-800' }
+        ];
+
+        let currentData = { mon: [], tue: [], wed: [], thu: [], fri: [] };
+
+        // โหลดข้อมูลแบบ Realtime ทันทีที่มีการเปลี่ยนแปลง
+        const bookingsRef = ref(db, 'bookings');
+        onValue(bookingsRef, (snapshot) => {
+            const data = snapshot.val();
+            currentData = data || { mon: [], tue: [], wed: [], thu: [], fri: [] };
+            renderDays();
+        });
+
+        function renderDays() {
+            const grid = document.getElementById('days-grid');
+            grid.innerHTML = '';
+
+            days.forEach(day => {
+                const bookedList = currentData[day.id] || [];
+                // เรียงเลขที่จากน้อยไปมาก
+                bookedList.sort((a, b) => a - b);
+                const isFull = bookedList.length >= 6;
+
+                let html = `
+                    <div class="rounded-3xl p-5 border ${day.color} shadow-sm flex flex-col justify-between transition-all">
+                        <div>
+                            <div class="flex justify-between items-center mb-3">
+                                <h3 class="font-bold text-lg">${day.name}</h3>
+                                <span class="text-xs px-2.5 py-1 rounded-full font-bold ${day.badge}">
+                                    ${bookedList.length}/6 คน
+                                </span>
+                            </div>
+                            <div class="border-b border-black/5 mb-3"></div>
+                            <div class="space-y-1.5 mb-4 min-h-[140px]">
+                `;
+
+                if (bookedList.length === 0) {
+                    html += `<p class="text-slate-400 text-xs italic text-center py-6">ยังไม่มีคนจอง</p>`;
+                } else {
+                    bookedList.forEach((no, idx) => {
+                        html += `<div class="bg-white/80 px-3 py-1.5 rounded-xl text-sm font-semibold shadow-sm flex items-center justify-between">
+                            <span>เลขที่ ${no}</span>
+                            <span class="text-xs text-slate-400">#${idx+1}</span>
+                        </div>`;
+                    });
+                }
+
+                html += `   </div>
+                        </div>
+                        <button onclick="bookDay('${day.id}')" 
+                            class="w-full py-2.5 rounded-2xl font-medium text-sm transition shadow-sm ${isFull ? 'bg-slate-200 text-slate-400 cursor-not-allowed' : 'bg-slate-900 text-white hover:bg-slate-800 active:scale-95'}">
+                            ${isFull ? 'วันเต็มแล้ว' : 'จองวันนี้ ✍️'}
+                        </button>
+                    </div>
+                `;
+                grid.innerHTML += html;
+            });
+        }
+
+        // ฟังก์ชันกดจองผ่าน Firebase Transaction (ป้องกันการแย่งกันกดเวลาเดียวกัน)
+        window.bookDay = function(dayId) {
+            const noInput = document.getElementById('studentNo');
+            const studentNo = parseInt(noInput.value.trim());
+
+            if (!studentNo || studentNo < 1 || studentNo > 28) {
+                alert('กรุณากรอกเลขที่ของคุณให้ถูกต้อง (1 - 28) ก่อนกดเลือกวันครับ!');
+                noInput.focus();
+                return;
+            }
+
+            // ตรวจสอบว่าเลขที่นี้เคยจองไปแล้วหรือยังในวันอื่น
+            let alreadyBookedDay = '';
+            Object.keys(currentData).forEach(d => {
+                if ((currentData[d] || []).map(Number).includes(studentNo)) {
+                    alreadyBookedDay = d;
+                }
+            });
+
+            if (alreadyBookedDay) {
+                alert(`เลขที่ ${studentNo} ได้ทำการจองวันอื่นไปแล้ว ไม่อนุญาตให้จองซ้ำครับ!`);
+                return;
+            }
+
+            const dayRef = ref(db, `bookings/${dayId}`);
+            
+            runTransaction(dayRef, (currentList) => {
+                if (currentList === null) {
+                    return [studentNo];
+                }
+                if (currentList.length >= 6) {
+                    return; 
+                }
+                if (!currentList.map(Number).includes(studentNo)) {
+                    currentList.push(studentNo);
+                }
+                return currentList;
+            }).then((result) => {
+                if (result.committed) {
+                    alert(`🎉 จองสำเร็จ! เลขที่ ${studentNo} ประจำวันเรียบร้อย`);
+                    noInput.value = '';
+                } else {
+                    alert('❌ เสียใจด้วย วันนี้เพิ่งเต็มพอดี กรุณาเลือกวันอื่นครับ!');
+                }
+            }).catch((err) => {
+                alert('เกิดข้อผิดพลาด: ' + err.message);
+            });
+        };
+    </script>
+</body>
+</html>
